@@ -1,8 +1,6 @@
-from flask import request
+from flask import request, jsonify
 from flask_restx import Namespace, Resource
-
 from app.container import movie_service
-
 from app.dao.models.movie import MovieSchema
 
 movies_ns = Namespace('movies')
@@ -14,17 +12,29 @@ movie_schema = MovieSchema()
 @movies_ns.route('/')
 class MovieView(Resource):
     def get(self):
-        all_movies = movie_service.get_all()
 
+        director_id = request.args.get('director_id')
+        year = request.args.get('year')
+        genre_id = request.args.get('genre_id')
 
-        return movies_schema.dump(all_movies), 200
+        if director_id:
+            movies = movie_service.get_by_director(director_id)
+        elif year:
+            movies = movie_service.get_by_year(year)
+        elif genre_id:
+            movies = movie_service.get_by_genre(genre_id)
+        else:
+            movies = movie_service.get_all()
+        return movies_schema.dump(movies), 200
 
     def post(self):
-        def post(self):
-            req = request.json
-            movie_service.create(req)
-
-            return "", 201
+        data = request.get_json()
+        movie_service.create(data)
+        movie_id = data['id']
+        response = jsonify()
+        response.status_code = 201
+        response.headers['location'] = f'/{movie_id}'
+        return response
 
 
 @movies_ns.route('/<int:mid>')
@@ -35,20 +45,19 @@ class MovieView(Resource):
         return movie_schema.dump(movie), 200
 
     def put(self, mid):
-        req_json = request.json
-        req_json['id'] = mid
-        movie = movie_service.update(mid)
+        data = request.get_json()
+        data['id'] = mid
+        movie_service.update(data)
 
         return '', 204
 
     def patch(self, mid):
-        req_json = request.json
-        req_json['id'] = mid
-        movie = movie_service.update(mid)
+        data = request.get_json()
+        data['id'] = mid
+        movie_service.update(data)
         return '', 204
 
+    def delete(self, mid):
+        movie_service.delete(mid)
 
-def delete(self, mid):
-    movie = movie_service.delete(mid)
-
-    return '', 204
+        return '', 204
